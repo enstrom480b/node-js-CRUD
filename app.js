@@ -4,7 +4,13 @@ var session=require('express-session')
 var expressvalidator=require('express-validator')
 var bodyparser=require('body-parser')
 var Category=require('./models/category.js')
+var fileupload=require('express-fileupload')
 var app=express()
+var mkdir=require('mkdirp')
+var fs=require('fs-extra')
+var Product=require('./models/product.js')
+var auth=require('./auth')
+var isadmin=auth.isadmin
 //var pages=require('./routes/pages')
 //var adminpages=require('./routes/admin_pages')
 var Page=require('./models/db.js')
@@ -24,8 +30,9 @@ resave:false,
 saveUnitilized:true,
 cookie:{secure:true}	
 }))
+app.use(fileupload())
 //express validator middleware
-
+/*
 app.use(expressvalidator({
 errorFormatter:function(param,msg,value){
 var namespace=param.split('.'),
@@ -41,9 +48,7 @@ value:value
 }
 }	
 }))
-
-
-
+*/
 //express messages
 /*
 app.use(require('connect-flash')())
@@ -59,7 +64,7 @@ app.use(function(req,res,next){
 */
 
 //app.use('app.get()/admin/pages',)
-app.get('/',function(req,res){
+app.get('/',isadmin,function(req,res){
 	Page.find({}).sort({sorting:1}).exec(function(err,pages){
 		res.render('admin',{
 			pages:pages
@@ -85,6 +90,73 @@ app.get('/addpage',function(req,res){
 	})
 })
 
+app.get('/add-product',function(req,res){
+	var title=""
+	var desc=""
+	var price=""
+	Category.find(function(err,categories){
+	res.render('add-product',{
+		title:title,
+		desc:desc,
+		categories:categories,
+		price:price,
+
+	})
+	})
+})
+app.get('/adminproducts',(req,res)=>{
+	var count;
+	Products.count(function(err,c){
+		count=c
+	})
+	Products.find(function(err,product){
+		res.render('product',{
+			product:product,
+			count:count
+		})
+		
+	})
+})
+
+app.post('/add-product',(req,res)=>{
+
+var title=req.body.title
+var desc=req.body.desc
+var price=req.body.price
+var category=req.body.category
+var slug=req.body.slug
+var price=parseInt(price)
+var product=new Product({
+	title:title,
+	slug:slug,
+	desc:desc,
+	price:price,
+	category:category
+	
+})
+product.save(function(err,data){
+	if(err)
+	{
+		console.log(err)
+	}
+	else{
+		console.log('saved',data)
+	}
+})
+res.redirect('/add-product')
+})
+
+app.get('/allproducts',function(req,res){
+	Product.find(function(err,product){
+		res.render('allproducts',{
+			product:product,
+
+		})
+	
+})
+})
+
+
 app.post('/addpage',function(req,res){
 	//req.checkBody('title','title must have a value').notEmpty()
 	//req.checkBody('content','content must have a value').notEmpty()
@@ -93,7 +165,9 @@ app.post('/addpage',function(req,res){
 	var content=req.body.content
 	//.replace('/\s+/g','-').toLowerCase()
 	//if(slug=='')
-		//slug=title.replace(/\s+/g,'-').toLowerCase()
+	
+	//slug=title.replace(/\s+/g,'-').toLowerCase()
+	/*
 var errors=req.validationErrors()
 	if(errors)
 	{
@@ -103,7 +177,9 @@ var errors=req.validationErrors()
 		slug:slug
 	})
 	
-	}else{
+	}
+	*/
+	//else{
 	var page=new Page({
 		title:title,
 		slug:slug,
@@ -115,9 +191,9 @@ var errors=req.validationErrors()
 		{
 			return console.log(err)
 		}
-		else{
+		//else{
 
-		}
+		//}
 	})
 		//})
 	/*
@@ -134,7 +210,7 @@ var errors=req.validationErrors()
 	*/	
 		
 res.redirect('/')
-	}
+	//}
 })
 //END OF ADD PAGES
 app.get('/edit-page/:slug',function(req,res){
